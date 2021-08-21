@@ -69,6 +69,23 @@ async function HANDLER (fetch_event) {
           // parse base-10 number from header string
           xTtlSeconds = parseInt(xTtlSeconds, 10)
         }
+        let alias = url.searchParams.get('name') || url.searchParams.get('alias')        
+        if (alias) {
+          // create table alias (alias varchar(32), key ...) unique alias
+          // result = insert into alias values (name, key) (alias) returning alias on conflict do nothing
+          // if (result) {return BuildResponse('Success. key ${key}, url: ${url.href}?key=${key}&raw'), ..., 200) else { return BuildResponse('Sorry, already taken', DEFAULT_MIME_TEXT, {}, 409) } else { return 
+          let { contentFromKeyAsArrayBuffer, metadata } = await NAMESPACE.getWithMetadata(key, 'arrayBuffer')
+          if (metadata === null) {
+            // check to see if old (pre-metadata)
+            contentFromKeyAsArrayBuffer = await NAMESPACE.get(key, 'arrayBuffer')
+            if (contentFromKeyAsArrayBuffer !== null) {
+              contentFromKeyAsArrayBuffer = contentFromKeyAsArrayBuffer.slice(0, -26)
+            } else {
+              return buildResponse('Sorry, invalid key!', DEFAULT_MIME_TEXT, {}, )
+            }
+
+        }
+        const alias = url.searchParams.get('name') || url.searchParams.get('alias')
         await NAMESPACE.put(storeKey, blob, { expirationTtl: xTtlSeconds, metadata: { edit: editKey, del: deleteKey } })
         // date string for expiry in IS08601; have to multiply TTL (in seconds) by 1000 for JS-friendly time
         const expiryTime = new Date(xTtlSeconds * 1000 + now).toISOString()
@@ -340,4 +357,3 @@ function buildResponse (blob, type = DEFAULT_MIME_HTML, headers = {}, statuscode
   }
   return new Response(blob, { status: statuscode, headers: headersObj })
 }
-
